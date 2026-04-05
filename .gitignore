@@ -49,3 +49,6 @@ datasets/raw/
 
 # Misc
 coverage/
+
+backend/uploads/*
+backend/storage/*

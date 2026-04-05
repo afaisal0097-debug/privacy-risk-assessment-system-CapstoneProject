@@ -1,7 +1,6 @@
 from fastapi import FastAPI
+from app.routes.upload import router as upload_router
 
-app = FastAPI(title="Privacy Risk Assessment API")
+app = FastAPI(title="File Upload API")
 
-@app.get("/")
-def read_root():
-    return {"message": "Backend is running"}
+app.include_router(upload_router, prefix="/api")
