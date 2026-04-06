@@ -8,6 +8,7 @@ from app.services.validate import (
     extract_columns,
     validate_quasi_and_sensitive_attributes,
 )
+from app.services.risk_evaluation import risk_evaluation
 from app.database import get_db
 from app.repositories import insert_dataset_upload, bulk_insert_real_records, bulk_insert_synthetic_records
 from app.models import DatasetKind
@@ -113,6 +114,14 @@ async def upload_datasets(
 
         # Bulk insert synthetic records
         bulk_insert_synthetic_records(db=db, file_uuid=synthetic_file_uuid, df=synthetic_df)
+
+        # Perform risk evaluation asynchronously
+        await risk_evaluation(
+            real_uuid=real_file_uuid,
+            synthetic_uuid=synthetic_file_uuid,
+            qi_list=validated_fields["quasi_identifiers"],
+            sa_list=validated_fields["sensitive_attributes"]
+        )
 
         common_columns = sorted(list(set(real_columns).intersection(set(synthetic_columns))))
         real_only_columns = sorted(list(set(real_columns) - set(synthetic_columns)))
