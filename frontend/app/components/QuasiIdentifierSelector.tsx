@@ -3,17 +3,23 @@ interface QuasiIdentifierSelectorProps {
   onChange: (updated: string[]) => void;
 }
 
-export const QUASI_IDENTIFIER_OPTIONS = [
-  "Age",
-  "Gender",
-  "ZIP Code",
-  "Date of Birth",
-  "Ethnicity",
-  "Occupation",
-  "Marital Status",
-  "Admission Type",
-  "Diagnosis Code",
+type SelectorOption = {
+  label: string;
+  value: string;
+};
+
+export const QUASI_IDENTIFIER_OPTIONS: SelectorOption[] = [
+  { label: "Age", value: "age" },
+  { label: "Gender", value: "gender" },
+  { label: "Race / Ethnicity", value: "race" },
+  { label: "Admission Type", value: "admission_type_id" },
+  { label: "Admission Source", value: "admission_source_id" },
+  { label: "Discharge Disposition", value: "discharge_disposition_id" },
+  { label: "Payer Code", value: "payer_code" },
+  { label: "Medical Specialty", value: "medical_specialty" },
 ];
+
+export const DEFAULT_QUASI_IDENTIFIERS = ["age", "gender", "race"];
 
 function QuasiIdentifierItem({
   label,
@@ -85,11 +91,11 @@ export default function QuasiIdentifierSelector({
   selected,
   onChange,
 }: QuasiIdentifierSelectorProps) {
-  const toggle = (label: string) => {
-    if (selected.includes(label)) {
-      onChange(selected.filter((v) => v !== label));
+  const toggle = (value: string) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter((v) => v !== value));
     } else {
-      onChange([...selected, label]);
+      onChange([...selected, value]);
     }
   };
 
@@ -108,12 +114,12 @@ export default function QuasiIdentifierSelector({
 
       {/* Checkbox grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {QUASI_IDENTIFIER_OPTIONS.map((label) => (
+        {QUASI_IDENTIFIER_OPTIONS.map((option) => (
           <QuasiIdentifierItem
-            key={label}
-            label={label}
-            checked={selected.includes(label)}
-            onToggle={() => toggle(label)}
+            key={option.value}
+            label={option.label}
+            checked={selected.includes(option.value)}
+            onToggle={() => toggle(option.value)}
           />
         ))}
       </div>

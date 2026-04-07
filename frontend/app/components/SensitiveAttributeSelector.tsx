@@ -3,21 +3,27 @@ interface SensitiveAttributeSelectorProps {
   onChange: (updated: string[]) => void;
 }
 
-export const SENSITIVE_ATTRIBUTE_OPTIONS = [
-  "Diagnosis Code",
-  "Medical History",
-  "Treatment Details",
-  "Medication",
-  "Lab Results",
-  "Insurance Provider",
-  "Admission Type",
-  "Discharge Status",
+type SelectorOption = {
+  label: string;
+  value: string;
+};
+
+export const SENSITIVE_ATTRIBUTE_OPTIONS: SelectorOption[] = [
+  { label: "Primary Diagnosis", value: "diag_1" },
+  { label: "Secondary Diagnosis", value: "diag_2" },
+  { label: "Tertiary Diagnosis", value: "diag_3" },
+  { label: "A1C Result", value: "A1Cresult" },
+  { label: "Max Glucose Serum", value: "max_glu_serum" },
+  { label: "Insulin", value: "insulin" },
+  { label: "Metformin", value: "metformin" },
+  { label: "Diabetes Medication", value: "diabetesMed" },
+  { label: "Readmitted", value: "readmitted" },
 ];
 
 export const DEFAULT_SENSITIVE_ATTRIBUTES = [
-  "Diagnosis Code",
-  "Medical History",
-  "Treatment Details",
+  "diag_1",
+  "diag_2",
+  "readmitted",
 ];
 
 function SensitiveAttributeItem({
@@ -90,11 +96,11 @@ export default function SensitiveAttributeSelector({
   selected,
   onChange,
 }: SensitiveAttributeSelectorProps) {
-  const toggle = (label: string) => {
-    if (selected.includes(label)) {
-      onChange(selected.filter((v) => v !== label));
+  const toggle = (value: string) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter((v) => v !== value));
     } else {
-      onChange([...selected, label]);
+      onChange([...selected, value]);
     }
   };
 
@@ -113,12 +119,12 @@ export default function SensitiveAttributeSelector({
 
       {/* Checkbox grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {SENSITIVE_ATTRIBUTE_OPTIONS.map((label) => (
+        {SENSITIVE_ATTRIBUTE_OPTIONS.map((option) => (
           <SensitiveAttributeItem
-            key={label}
-            label={label}
-            checked={selected.includes(label)}
-            onToggle={() => toggle(label)}
+            key={option.value}
+            label={option.label}
+            checked={selected.includes(option.value)}
+            onToggle={() => toggle(option.value)}
           />
         ))}
       </div>
