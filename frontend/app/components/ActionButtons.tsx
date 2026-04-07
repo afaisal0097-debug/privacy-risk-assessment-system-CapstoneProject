@@ -4,15 +4,20 @@ import { useRouter } from "next/navigation";
 
 interface ActionButtonsProps {
   onReset: () => void;
-  /** Quasi-identifiers selected by the user. Stored in sessionStorage so the
-   *  results page (and future API calls) can read them after navigation.
+  /**
+   * Quasi-identifiers and sensitive attributes selected by the user.
+   * Persisted to sessionStorage before navigating to /results so the results
+   * page (and future API calls) can read them after navigation.
    *
-   *  TODO (backend integration): replace the sessionStorage write with a POST
-   *  body or query param when wiring up the real analysis endpoint, e.g.:
-   *    await fetch("/api/analyze", { method: "POST",
-   *      body: JSON.stringify({ quasiIdentifiers }) })
+   * TODO (backend integration): replace the sessionStorage writes with a real
+   * API call when the backend is ready, e.g.:
+   *   await fetch("/api/analyze", {
+   *     method: "POST",
+   *     body: JSON.stringify({ quasiIdentifiers, sensitiveAttributes }),
+   *   })
    */
   quasiIdentifiers?: string[];
+  sensitiveAttributes?: string[];
 }
 
 function PlayIcon() {
@@ -52,15 +57,20 @@ function RefreshIcon() {
 export default function ActionButtons({
   onReset,
   quasiIdentifiers = [],
+  sensitiveAttributes = [],
 }: ActionButtonsProps) {
   const router = useRouter();
 
   const handleRunAnalysis = () => {
-    // Persist selected quasi-identifiers so the results page can access them.
-    // TODO: replace this with the actual API call when the backend is ready.
+    // Persist selections so the results page can access them after navigation.
+    // TODO: replace these writes with a real API call when the backend is ready.
     sessionStorage.setItem(
       "selectedQuasiIdentifiers",
       JSON.stringify(quasiIdentifiers)
+    );
+    sessionStorage.setItem(
+      "selectedSensitiveAttributes",
+      JSON.stringify(sensitiveAttributes)
     );
     router.push("/results");
   };

@@ -5,6 +5,9 @@ import UploadCard from "@/app/components/UploadCard";
 import SummaryCard from "@/app/components/SummaryCard";
 import ActionButtons from "@/app/components/ActionButtons";
 import QuasiIdentifierSelector from "@/app/components/QuasiIdentifierSelector";
+import SensitiveAttributeSelector, {
+  DEFAULT_SENSITIVE_ATTRIBUTES,
+} from "@/app/components/SensitiveAttributeSelector";
 
 /* Default quasi-identifiers selected on first load */
 const DEFAULT_QUASI_IDENTIFIERS = [
@@ -122,6 +125,9 @@ export default function Home() {
   const [selectedQIs, setSelectedQIs] = useState<string[]>(
     DEFAULT_QUASI_IDENTIFIERS
   );
+  const [selectedSAs, setSelectedSAs] = useState<string[]>(
+    DEFAULT_SENSITIVE_ATTRIBUTES
+  );
 
   const bothUploaded = realFile !== null && syntheticFile !== null;
 
@@ -129,6 +135,7 @@ export default function Home() {
     setRealFile(null);
     setSyntheticFile(null);
     setSelectedQIs(DEFAULT_QUASI_IDENTIFIERS);
+    setSelectedSAs(DEFAULT_SENSITIVE_ATTRIBUTES);
   };
 
   return (
@@ -190,6 +197,12 @@ export default function Home() {
               onChange={setSelectedQIs}
             />
 
+            {/* Section: Select Sensitive Attributes */}
+            <SensitiveAttributeSelector
+              selected={selectedSAs}
+              onChange={setSelectedSAs}
+            />
+
             {/* Section: Dataset Summary */}
             <div className="w-full max-w-5xl flex flex-col gap-4">
               <h2 className="text-[#101828] text-lg font-semibold leading-7">
@@ -208,10 +221,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Action buttons — passes selected QIs for future API use */}
+            {/* Action buttons — passes both QIs and SAs for future API use */}
             <ActionButtons
               onReset={handleReset}
               quasiIdentifiers={selectedQIs}
+              sensitiveAttributes={selectedSAs}
             />
           </>
         )}
