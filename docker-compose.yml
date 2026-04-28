@@ -13,15 +13,15 @@ services:
     env_file:
       - .env
 
-  # frontend:
-  #   build: ./frontend
-  #   container_name: privacy-risk-frontend
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./frontend:/app
-  #   depends_on:
-  #     - backend
+  frontend:
+    build: ./frontend
+    container_name: privacy-risk-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    env_file:
+      - ./frontend/.env.docker
 
   db:
     image: postgres:16

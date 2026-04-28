@@ -1,11 +1,19 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 from .models import DatasetUpload, RealDatasetRecord, SyntheticDatasetRecord, DatasetKind
 from typing import List, Dict
 import pandas as pd
 import uuid
+import numpy as np
 
-def insert_dataset_upload(
-    db: Session,
+def _convert_value(value):
+    """Convert pandas value to string or None for database"""
+    if pd.isna(value) or value is None or (isinstance(value, float) and np.isnan(value)):
+        return None
+    return str(value)
+
+async def insert_dataset_upload(
+    db: AsyncSession,
     dataset_kind: DatasetKind,
     input_filename: str,
     stored_filename: str,
@@ -32,126 +40,128 @@ def insert_dataset_upload(
         notes=notes
     )
     db.add(upload)
-    db.commit()
-    db.refresh(upload)
+    await db.commit()
+    await db.refresh(upload)
     return str(upload.file_uuid)
 
-def bulk_insert_real_records(db: Session, file_uuid: str, df: pd.DataFrame):
-    records = []
-    for _, row in df.iterrows():
-        record = {
-            "file_uuid": file_uuid,
-            "encounter_id": row.get("encounter_id"),
-            "patient_nbr": row.get("patient_nbr"),
-            "race": row.get("race"),
-            "gender": row.get("gender"),
-            "age": row.get("age"),
-            "weight": row.get("weight"),
-            "admission_type_id": row.get("admission_type_id"),
-            "discharge_disposition_id": row.get("discharge_disposition_id"),
-            "admission_source_id": row.get("admission_source_id"),
-            "time_in_hospital": row.get("time_in_hospital"),
-            "payer_code": row.get("payer_code"),
-            "medical_specialty": row.get("medical_specialty"),
-            "num_lab_procedures": row.get("num_lab_procedures"),
-            "num_procedures": row.get("num_procedures"),
-            "num_medications": row.get("num_medications"),
-            "number_outpatient": row.get("number_outpatient"),
-            "number_emergency": row.get("number_emergency"),
-            "number_inpatient": row.get("number_inpatient"),
-            "diag_1": row.get("diag_1"),
-            "diag_2": row.get("diag_2"),
-            "diag_3": row.get("diag_3"),
-            "number_diagnoses": row.get("number_diagnoses"),
-            "max_glu_serum": row.get("max_glu_serum"),
-            "A1Cresult": row.get("A1Cresult"),
-            "metformin": row.get("metformin"),
-            "repaglinide": row.get("repaglinide"),
-            "nateglinide": row.get("nateglinide"),
-            "chlorpropamide": row.get("chlorpropamide"),
-            "glimepiride": row.get("glimepiride"),
-            "acetohexamide": row.get("acetohexamide"),
-            "glipizide": row.get("glipizide"),
-            "glyburide": row.get("glyburide"),
-            "tolbutamide": row.get("tolbutamide"),
-            "pioglitazone": row.get("pioglitazone"),
-            "rosiglitazone": row.get("rosiglitazone"),
-            "acarbose": row.get("acarbose"),
-            "miglitol": row.get("miglitol"),
-            "troglitazone": row.get("troglitazone"),
-            "tolazamide": row.get("tolazamide"),
-            "examide": row.get("examide"),
-            "citoglipton": row.get("citoglipton"),
-            "insulin": row.get("insulin"),
-            "glyburide_metformin": row.get("glyburide-metformin"),
-            "glipizide_metformin": row.get("glipizide-metformin"),
-            "glimepiride_pioglitazone": row.get("glimepiride-pioglitazone"),
-            "metformin_rosiglitazone": row.get("metformin-rosiglitazone"),
-            "metformin_pioglitazone": row.get("metformin-pioglitazone"),
-            "change": row.get("change"),
-            "diabetesMed": row.get("diabetesMed"),
-            "readmitted": row.get("readmitted"),
-        }
-        records.append(record)
-    db.bulk_insert_mappings(RealDatasetRecord, records)
-    db.commit()
 
-def bulk_insert_synthetic_records(db: Session, file_uuid: str, df: pd.DataFrame):
+async def bulk_insert_real_records(db: AsyncSession, file_uuid: str, df: pd.DataFrame):
     records = []
     for _, row in df.iterrows():
-        record = {
-            "file_uuid": file_uuid,
-            "encounter_id": row.get("encounter_id"),
-            "patient_nbr": row.get("patient_nbr"),
-            "race": row.get("race"),
-            "gender": row.get("gender"),
-            "age": row.get("age"),
-            "weight": row.get("weight"),
-            "admission_type_id": row.get("admission_type_id"),
-            "discharge_disposition_id": row.get("discharge_disposition_id"),
-            "admission_source_id": row.get("admission_source_id"),
-            "time_in_hospital": row.get("time_in_hospital"),
-            "payer_code": row.get("payer_code"),
-            "medical_specialty": row.get("medical_specialty"),
-            "num_lab_procedures": row.get("num_lab_procedures"),
-            "num_procedures": row.get("num_procedures"),
-            "num_medications": row.get("num_medications"),
-            "number_outpatient": row.get("number_outpatient"),
-            "number_emergency": row.get("number_emergency"),
-            "number_inpatient": row.get("number_inpatient"),
-            "diag_1": row.get("diag_1"),
-            "diag_2": row.get("diag_2"),
-            "diag_3": row.get("diag_3"),
-            "number_diagnoses": row.get("number_diagnoses"),
-            "max_glu_serum": row.get("max_glu_serum"),
-            "A1Cresult": row.get("A1Cresult"),
-            "metformin": row.get("metformin"),
-            "repaglinide": row.get("repaglinide"),
-            "nateglinide": row.get("nateglinide"),
-            "chlorpropamide": row.get("chlorpropamide"),
-            "glimepiride": row.get("glimepiride"),
-            "acetohexamide": row.get("acetohexamide"),
-            "glipizide": row.get("glipizide"),
-            "glyburide": row.get("glyburide"),
-            "tolbutamide": row.get("tolbutamide"),
-            "pioglitazone": row.get("pioglitazone"),
-            "rosiglitazone": row.get("rosiglitazone"),
-            "acarbose": row.get("acarbose"),
-            "miglitol": row.get("miglitol"),
-            "troglitazone": row.get("troglitazone"),
-            "tolazamide": row.get("tolazamide"),
-            "examide": row.get("examide"),
-            "citoglipton": row.get("citoglipton"),
-            "insulin": row.get("insulin"),
-            "glyburide_metformin": row.get("glyburide-metformin"),
-            "glipizide_metformin": row.get("glipizide-metformin"),
-            "glimepiride_pioglitazone": row.get("glimepiride-pioglitazone"),
-            "metformin_rosiglitazone": row.get("metformin-rosiglitazone"),
-            "metformin_pioglitazone": row.get("metformin-pioglitazone"),
-            "change": row.get("change"),
-            "diabetesMed": row.get("diabetesMed"),
-            "readmitted": row.get("readmitted"),
-        }
+        record = RealDatasetRecord(
+            file_uuid=file_uuid,
+            encounter_id=_convert_value(row.get("encounter_id")),
+            patient_nbr=_convert_value(row.get("patient_nbr")),
+            race=_convert_value(row.get("race")),
+            gender=_convert_value(row.get("gender")),
+            age=_convert_value(row.get("age")),
+            weight=_convert_value(row.get("weight")),
+            admission_type_id=_convert_value(row.get("admission_type_id")),
+            discharge_disposition_id=_convert_value(row.get("discharge_disposition_id")),
+            admission_source_id=_convert_value(row.get("admission_source_id")),
+            time_in_hospital=_convert_value(row.get("time_in_hospital")),
+            payer_code=_convert_value(row.get("payer_code")),
+            medical_specialty=_convert_value(row.get("medical_specialty")),
+            num_lab_procedures=_convert_value(row.get("num_lab_procedures")),
+            num_procedures=_convert_value(row.get("num_procedures")),
+            num_medications=_convert_value(row.get("num_medications")),
+            number_outpatient=_convert_value(row.get("number_outpatient")),
+            number_emergency=_convert_value(row.get("number_emergency")),
+            number_inpatient=_convert_value(row.get("number_inpatient")),
+            diag_1=_convert_value(row.get("diag_1")),
+            diag_2=_convert_value(row.get("diag_2")),
+            diag_3=_convert_value(row.get("diag_3")),
+            number_diagnoses=_convert_value(row.get("number_diagnoses")),
+            max_glu_serum=_convert_value(row.get("max_glu_serum")),
+            A1Cresult=_convert_value(row.get("A1Cresult")),
+            metformin=_convert_value(row.get("metformin")),
+            repaglinide=_convert_value(row.get("repaglinide")),
+            nateglinide=_convert_value(row.get("nateglinide")),
+            chlorpropamide=_convert_value(row.get("chlorpropamide")),
+            glimepiride=_convert_value(row.get("glimepiride")),
+            acetohexamide=_convert_value(row.get("acetohexamide")),
+            glipizide=_convert_value(row.get("glipizide")),
+            glyburide=_convert_value(row.get("glyburide")),
+            tolbutamide=_convert_value(row.get("tolbutamide")),
+            pioglitazone=_convert_value(row.get("pioglitazone")),
+            rosiglitazone=_convert_value(row.get("rosiglitazone")),
+            acarbose=_convert_value(row.get("acarbose")),
+            miglitol=_convert_value(row.get("miglitol")),
+            troglitazone=_convert_value(row.get("troglitazone")),
+            tolazamide=_convert_value(row.get("tolazamide")),
+            examide=_convert_value(row.get("examide")),
+            citoglipton=_convert_value(row.get("citoglipton")),
+            insulin=_convert_value(row.get("insulin")),
+            glyburide_metformin=_convert_value(row.get("glyburide-metformin")),
+            glipizide_metformin=_convert_value(row.get("glipizide-metformin")),
+            glimepiride_pioglitazone=_convert_value(row.get("glimepiride-pioglitazone")),
+            metformin_rosiglitazone=_convert_value(row.get("metformin-rosiglitazone")),
+            metformin_pioglitazone=_convert_value(row.get("metformin-pioglitazone")),
+            change=_convert_value(row.get("change")),
+            diabetesMed=_convert_value(row.get("diabetesMed")),
+            readmitted=_convert_value(row.get("readmitted")),
+        )
         records.append(record)
-    db.bulk_insert_mappings(SyntheticDatasetRecord, records)
-    db.commit()
+    db.add_all(records)
+    await db.commit()
+
+
+async def bulk_insert_synthetic_records(db: AsyncSession, file_uuid: str, df: pd.DataFrame):
+    records = []
+    for _, row in df.iterrows():
+        record = SyntheticDatasetRecord(
+            file_uuid=file_uuid,
+            encounter_id=_convert_value(row.get("encounter_id")),
+            patient_nbr=_convert_value(row.get("patient_nbr")),
+            race=_convert_value(row.get("race")),
+            gender=_convert_value(row.get("gender")),
+            age=_convert_value(row.get("age")),
+            weight=_convert_value(row.get("weight")),
+            admission_type_id=_convert_value(row.get("admission_type_id")),
+            discharge_disposition_id=_convert_value(row.get("discharge_disposition_id")),
+            admission_source_id=_convert_value(row.get("admission_source_id")),
+            time_in_hospital=_convert_value(row.get("time_in_hospital")),
+            payer_code=_convert_value(row.get("payer_code")),
+            medical_specialty=_convert_value(row.get("medical_specialty")),
+            num_lab_procedures=_convert_value(row.get("num_lab_procedures")),
+            num_procedures=_convert_value(row.get("num_procedures")),
+            num_medications=_convert_value(row.get("num_medications")),
+            number_outpatient=_convert_value(row.get("number_outpatient")),
+            number_emergency=_convert_value(row.get("number_emergency")),
+            number_inpatient=_convert_value(row.get("number_inpatient")),
+            diag_1=_convert_value(row.get("diag_1")),
+            diag_2=_convert_value(row.get("diag_2")),
+            diag_3=_convert_value(row.get("diag_3")),
+            number_diagnoses=_convert_value(row.get("number_diagnoses")),
+            max_glu_serum=_convert_value(row.get("max_glu_serum")),
+            A1Cresult=_convert_value(row.get("A1Cresult")),
+            metformin=_convert_value(row.get("metformin")),
+            repaglinide=_convert_value(row.get("repaglinide")),
+            nateglinide=_convert_value(row.get("nateglinide")),
+            chlorpropamide=_convert_value(row.get("chlorpropamide")),
+            glimepiride=_convert_value(row.get("glimepiride")),
+            acetohexamide=_convert_value(row.get("acetohexamide")),
+            glipizide=_convert_value(row.get("glipizide")),
+            glyburide=_convert_value(row.get("glyburide")),
+            tolbutamide=_convert_value(row.get("tolbutamide")),
+            pioglitazone=_convert_value(row.get("pioglitazone")),
+            rosiglitazone=_convert_value(row.get("rosiglitazone")),
+            acarbose=_convert_value(row.get("acarbose")),
+            miglitol=_convert_value(row.get("miglitol")),
+            troglitazone=_convert_value(row.get("troglitazone")),
+            tolazamide=_convert_value(row.get("tolazamide")),
+            examide=_convert_value(row.get("examide")),
+            citoglipton=_convert_value(row.get("citoglipton")),
+            insulin=_convert_value(row.get("insulin")),
+            glyburide_metformin=_convert_value(row.get("glyburide-metformin")),
+            glipizide_metformin=_convert_value(row.get("glipizide-metformin")),
+            glimepiride_pioglitazone=_convert_value(row.get("glimepiride-pioglitazone")),
+            metformin_rosiglitazone=_convert_value(row.get("metformin-rosiglitazone")),
+            metformin_pioglitazone=_convert_value(row.get("metformin-pioglitazone")),
+            change=_convert_value(row.get("change")),
+            diabetesMed=_convert_value(row.get("diabetesMed")),
+            readmitted=_convert_value(row.get("readmitted")),
+        )
+        records.append(record)
+    db.add_all(records)
+    await db.commit()
