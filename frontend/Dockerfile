@@ -3,14 +3,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV=production
-
 # Copy package files
 COPY package*.json ./
 
 # Install ALL dependencies (including dev) for building
-RUN npm install
+RUN npm ci --include=dev
 
 # Copy env file
 COPY .env.docker .env.local
@@ -23,6 +20,9 @@ RUN npm run build
 
 # Remove dev dependencies
 RUN npm prune --production
+
+# Set production environment for runtime
+ENV NODE_ENV=production
 
 EXPOSE 3000
 

@@ -49,3 +49,4 @@ coverage/
 
 backend/uploads/*
 backend/storage/*
+backend/results/*

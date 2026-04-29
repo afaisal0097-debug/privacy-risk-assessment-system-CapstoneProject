@@ -15,6 +15,7 @@ import type { AnalysisResults, RiskLevel } from "@/app/results/mockData";
 // Shape of the nested file object returned by POST /api/upload.
 interface FileInfo {
   file_uuid?: string;
+  file_name?: string;
   original_filename?: string;
   stored_filename?: string;
   path?: string;
@@ -28,6 +29,7 @@ interface FileInfo {
 // Shape returned by POST /api/upload.
 // Fields that aren't yet provided by the backend fall back to mock values.
 interface ApiResult {
+  message?: string;
   // Dataset info — now nested FileInfo objects
   real_file?: FileInfo;
   synthetic_file?: FileInfo;
@@ -56,13 +58,13 @@ function buildResults(api: ApiResult): AnalysisResults {
   return {
     uploadedDatasets: {
       real: {
-        name: realFile?.original_filename ?? mockResults.uploadedDatasets.real.name,
+        name: realFile?.file_name ?? realFile?.original_filename ?? mockResults.uploadedDatasets.real.name,
         size: formatBytes(realFile?.size_bytes) !== "-"
           ? formatBytes(realFile?.size_bytes)
           : mockResults.uploadedDatasets.real.size,
       },
       synthetic: {
-        name: syntheticFile?.original_filename ?? mockResults.uploadedDatasets.synthetic.name,
+        name: syntheticFile?.file_name ?? syntheticFile?.original_filename ?? mockResults.uploadedDatasets.synthetic.name,
         size: formatBytes(syntheticFile?.size_bytes) !== "-"
           ? formatBytes(syntheticFile?.size_bytes)
           : mockResults.uploadedDatasets.synthetic.size,
@@ -161,6 +163,14 @@ function RefreshIcon() {
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="text-[#101828] text-lg font-semibold leading-7">{children}</h2>
+  );
+}
+
+function SuccessBanner({ message }: { message: string }) {
+  return (
+    <div className="w-full bg-[#ecfdf5] border border-[#86efac] rounded-[10px] px-5 py-4">
+      <p className="text-[#047857] text-sm font-medium leading-5">{message}</p>
+    </div>
   );
 }
 
@@ -264,6 +274,7 @@ export default function ResultsPage() {
       {/* ── Main ── */}
       <main className="flex-1 flex flex-col items-center px-6 py-10 gap-8">
         <div className="w-full max-w-5xl flex flex-col gap-8">
+          {apiResult.message && <SuccessBanner message={apiResult.message} />}
 
           {/* ── Section 1: Uploaded Datasets ── */}
           <div className="bg-white border border-[#e5e7eb] rounded-[14px] shadow-sm p-8 flex flex-col gap-6">

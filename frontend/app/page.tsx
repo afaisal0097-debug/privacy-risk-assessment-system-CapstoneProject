@@ -13,7 +13,7 @@ import SensitiveAttributeSelector, {
 } from "@/app/components/SensitiveAttributeSelector";
 
 // Backend base URL — set NEXT_PUBLIC_API_BASE_URL in .env.local
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 /* ── Icons ── */
 function ShieldIcon() {
@@ -74,6 +74,14 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
+function SuccessBanner({ message }: { message: string }) {
+  return (
+    <div className="w-full max-w-5xl bg-[#ecfdf5] border border-[#86efac] rounded-[10px] px-5 py-4">
+      <p className="text-[#047857] text-sm font-medium leading-5">{message}</p>
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
 
@@ -82,6 +90,7 @@ export default function Home() {
   const [selectedQIs, setSelectedQIs] = useState<string[]>(DEFAULT_QUASI_IDENTIFIERS);
   const [selectedSAs, setSelectedSAs] = useState<string[]>(DEFAULT_SENSITIVE_ATTRIBUTES);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const bothUploaded = realFile !== null && syntheticFile !== null;
@@ -93,11 +102,13 @@ export default function Home() {
     setSelectedQIs(DEFAULT_QUASI_IDENTIFIERS);
     setSelectedSAs(DEFAULT_SENSITIVE_ATTRIBUTES);
     setError(null);
+    setSuccessMessage(null);
   };
 
   // ── Run Analysis ───────────────────────────────────────────────────────────
   const handleRunAnalysis = async () => {
     setError(null);
+    setSuccessMessage(null);
 
     // Client-side validation
     if (!realFile || !syntheticFile) {
@@ -138,7 +149,10 @@ export default function Home() {
         body: form,
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get("content-type");
+      const data = contentType?.includes("application/json")
+        ? await res.json()
+        : { message: await res.text() };
 
       if (!res.ok) {
         // Surface the backend error message if present
@@ -152,6 +166,8 @@ export default function Home() {
 
       // Store the full response so the results page can read it
       sessionStorage.setItem("analysisResult", JSON.stringify(data));
+      setSuccessMessage(data?.message ?? "Files uploaded successfully.");
+      await new Promise((resolve) => setTimeout(resolve, 900));
       router.push("/results");
     } catch {
       setError(
@@ -199,15 +215,15 @@ export default function Home() {
               title="Real Dataset"
               accent="blue"
               file={realFile}
-              onFileSelect={(f) => { setRealFile(f); setError(null); }}
-              onRemove={() => setRealFile(null)}
+              onFileSelect={(f) => { setRealFile(f); setError(null); setSuccessMessage(null); }}
+              onRemove={() => { setRealFile(null); setSuccessMessage(null); }}
             />
             <UploadCard
               title="Synthetic Dataset"
               accent="teal"
               file={syntheticFile}
-              onFileSelect={(f) => { setSyntheticFile(f); setError(null); }}
-              onRemove={() => setSyntheticFile(null)}
+              onFileSelect={(f) => { setSyntheticFile(f); setError(null); setSuccessMessage(null); }}
+              onRemove={() => { setSyntheticFile(null); setSuccessMessage(null); }}
             />
           </div>
         </div>
@@ -218,13 +234,13 @@ export default function Home() {
             {/* Select Quasi Identifiers */}
             <QuasiIdentifierSelector
               selected={selectedQIs}
-              onChange={(v) => { setSelectedQIs(v); setError(null); }}
+              onChange={(v) => { setSelectedQIs(v); setError(null); setSuccessMessage(null); }}
             />
 
             {/* Select Sensitive Attributes */}
             <SensitiveAttributeSelector
               selected={selectedSAs}
-              onChange={(v) => { setSelectedSAs(v); setError(null); }}
+              onChange={(v) => { setSelectedSAs(v); setError(null); setSuccessMessage(null); }}
             />
 
             {/* Dataset Summary */}
@@ -253,6 +269,7 @@ export default function Home() {
             />
 
             {/* Error banner — shown below buttons */}
+            {successMessage && <SuccessBanner message={successMessage} />}
             {error && <ErrorBanner message={error} />}
           </>
         )}
