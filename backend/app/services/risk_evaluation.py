@@ -28,7 +28,9 @@ async def risk_evaluation(
         Dictionary containing uniqueness and rare-combination results.
     """
 
-    result_dir = os.path.join("results", f"{real_uuid}_{synthetic_uuid}")
+    # Prefix the result directory name so uniqueness runs are easily identifiable
+    # Example: results/r1_uniq_<real_uuid>_<synthetic_uuid>
+    result_dir = os.path.join("results", f"r1_uniq_{real_uuid}_{synthetic_uuid}")
     os.makedirs(result_dir, exist_ok=True)
 
     out_csv = os.path.join(result_dir, "syn_flags.csv")
