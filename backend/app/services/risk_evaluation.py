@@ -5,6 +5,8 @@ from typing import Any, Dict
 import pandas as pd
 
 from app.uniqueness import uniqueness_and_rare_combination
+from app.linkage import linkage_reidentification_risk
+
 from app.attribute_inference import attribute_inference_evaluation
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,10 @@ async def risk_evaluation(
     """
     Performs privacy risk evaluation on uploaded real and synthetic datasets.
 
+    This function currently runs:
+    1. Uniqueness and rare-combination risk
+    2. Linkage / re-identification risk
+
     Args:
         real_uuid: UUID of the real dataset file.
         synthetic_uuid: UUID of the synthetic dataset file.
@@ -30,20 +36,35 @@ async def risk_evaluation(
         synthetic_path: File path of the uploaded synthetic dataset.
 
     Returns:
-        Dictionary containing uniqueness and rare-combination results.
+        Dictionary containing risk evaluation results and generated file paths.
     """
 
     # Prefix the result directory name so uniqueness runs are easily identifiable
     # Example: results/r1_uniq_<real_uuid>_<synthetic_uuid>
     result_dir = os.path.join("results", f"r1_uniq_{real_uuid}_{synthetic_uuid}")
+    logger.info(
+        "Creating result directory for risk evaluation: %s",
+        result_dir,
+    )
     os.makedirs(result_dir, exist_ok=True)
 
+    # uniqueness and rare-combination output files.
     out_csv = os.path.join(result_dir, "syn_flags.csv")
     out_full_csv = os.path.join(result_dir, "syn_per_record.csv")
     out_json = os.path.join(result_dir, "syn_k_summary.json")
     out_qid_stats_csv = os.path.join(result_dir, "qid_group_stats.csv")
 
-    result = await asyncio.to_thread(
+    # linkage / re-identification output files.
+    linkage_per_record_csv = os.path.join(result_dir, "linkage_per_record.csv")
+    linkage_summary_json = os.path.join(result_dir, "linkage_summary.json")
+
+    # uniqueness risk evaluation 
+    logger.info(
+        "Starting uniqueness evaluation for real_path=%s synthetic_path=%s",
+        real_path,
+        synthetic_path,
+    )
+    uniqueness_result = await asyncio.to_thread(
         uniqueness_and_rare_combination,
         real_path=real_path,
         synthetic_path=synthetic_path,
@@ -54,6 +75,35 @@ async def risk_evaluation(
         out_json=out_json,
         out_qid_stats_csv=out_qid_stats_csv,
     )
+    logger.info(
+        "Uniqueness evaluation complete. outputs=%s, %s, %s, %s",
+        out_csv,
+        out_full_csv,
+        out_json,
+        out_qid_stats_csv,
+    )
+
+    # linkage / re-identification risk evaluation
+    logger.info(
+        "Starting linkage risk evaluation for real_path=%s synthetic_path=%s qis=%s",
+        real_path,
+        synthetic_path,
+        qi_list,
+    )
+    linkage_result = await asyncio.to_thread(
+        linkage_reidentification_risk,
+        real_path=real_path,
+        synthetic_path=synthetic_path,
+        qis=qi_list,
+        out_per_record_csv=linkage_per_record_csv,
+        out_json=linkage_summary_json,
+    )
+    logger.info(
+        "Linkage evaluation complete. outputs=%s, %s",
+        linkage_per_record_csv,
+        linkage_summary_json,
+    )
+
     # Ensure attribute-inference result directory exists early so it is present
     # even if some attributes fail during evaluation. This mirrors the
     # r1_uniq_<...> naming convention used above.
@@ -87,13 +137,18 @@ async def risk_evaluation(
             "sa_list": sa_list,
             "result_dir": result_dir,
             "files": {
+                # uniqueness files.
                 "syn_flags": out_csv,
                 "syn_per_record": out_full_csv,
                 "summary_json": out_json,
                 "qid_group_stats": out_qid_stats_csv,
+                # linkage files.
+                "linkage_per_record": linkage_per_record_csv,
+                "linkage_summary": linkage_summary_json,
                 "attribute_inference_files": attr_files,
             },
-            "summary": result,
+            "uniqueness_and_rare_combination": uniqueness_result,
+            "linkage_reidentification": linkage_result,
             "attribute_inference_summary": attr_summaries,
         }
 
@@ -198,12 +253,20 @@ async def risk_evaluation(
         "sa_list": sa_list,
         "result_dir": result_dir,
         "files": {
+            # uniqueness files.
             "syn_flags": out_csv,
             "syn_per_record": out_full_csv,
             "summary_json": out_json,
             "qid_group_stats": out_qid_stats_csv,
+
+            # linkage files.
+            "linkage_per_record": linkage_per_record_csv,
+            "linkage_summary": linkage_summary_json,
             "attribute_inference_files": attr_files,
         },
-        "summary": result,
-        "attribute_inference_summary": attr_summaries,
+        "summary": {
+            "uniqueness_and_rare_combination": uniqueness_result,
+            "linkage_reidentification": linkage_result,
+            "attribute_inference_summary": attr_summaries,
+        },
     }
