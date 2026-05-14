@@ -1,13 +1,17 @@
+import logging
 from fastapi import UploadFile, HTTPException
 from pathlib import Path
 import uuid
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {".csv", ".xlsx"}
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
 
 def validate_file_extension(filename: str) -> str:
+    logger.info("Validating file extension for filename=%s", filename)
     if not filename:
         raise HTTPException(status_code=400, detail="File name is missing")
 
@@ -29,6 +33,7 @@ async def save_upload_file(upload_file: UploadFile, storage_dir: Path) -> tuple[
     save_path = storage_dir / stored_filename
     total_size = 0
 
+    logger.info("Saving uploaded file %s to %s", upload_file.filename, save_path)
     try:
         with open(save_path, "wb") as buffer:
             while True:
@@ -54,6 +59,7 @@ async def save_upload_file(upload_file: UploadFile, storage_dir: Path) -> tuple[
     except Exception as e:
         if save_path.exists():
             save_path.unlink()
+        logger.exception("Failed to save uploaded file %s", upload_file.filename)
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
     finally:
         await upload_file.close()
@@ -64,6 +70,7 @@ async def save_upload_file(upload_file: UploadFile, storage_dir: Path) -> tuple[
 def extract_columns(file_path: Path) -> list[str]:
     ext = file_path.suffix.lower()
 
+    logger.info("Extracting columns from %s", file_path)
     try:
         if ext == ".csv":
             df = pd.read_csv(file_path, nrows=0)
@@ -116,6 +123,11 @@ def validate_quasi_and_sensitive_attributes(
     real_columns: list[str],
     synthetic_columns: list[str]
 ) -> dict:
+    logger.info(
+        "Validating attribute lists. quasi_identifiers=%s sensitive_attributes=%s",
+        quasi_identifiers,
+        sensitive_attributes,
+    )
     cleaned_qis = _clean_field_list(quasi_identifiers, "quasi identifier")
     cleaned_sas = _clean_field_list(sensitive_attributes, "sensitive attribute")
 
@@ -131,6 +143,12 @@ def validate_quasi_and_sensitive_attributes(
 
     _validate_fields_exist(cleaned_sas, real_columns, "real", "Sensitive attributes")
     _validate_fields_exist(cleaned_sas, synthetic_columns, "synthetic", "Sensitive attributes")
+
+    logger.info(
+        "Validation passed. cleaned_qis=%s cleaned_sas=%s",
+        cleaned_qis,
+        cleaned_sas,
+    )
 
     return {
         "quasi_identifiers": cleaned_qis,

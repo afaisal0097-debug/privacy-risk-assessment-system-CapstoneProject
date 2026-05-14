@@ -1,3 +1,11 @@
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger(__name__)
+logger.info("Starting Privacy Risk Assessment API")
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 import os
